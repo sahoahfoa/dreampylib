@@ -185,34 +185,3 @@ class DreampyLib(object):
         
     def dir(self):
         self.api.list_accessible_cmds()
-    
-if __name__ == '__main__':
-    
-    # Dreamhost test API account:
-    user = 'apitest@dreamhost.com'
-    key  = '6SHU5P2HLDAYECUM'
-    
-    # Set this to true to enable debugging
-    DEBUG = False
-    
-    # Initialize the library and open a connection
-    connection = DreampyLib(user,key)
-       
-    # If the connection is up, do some tests.
-    if connection.is_connected():
-        
-        # For instance, list the available commands:
-        print 'Available commands:\n ',
-        commands = connection.available_commands()
-        command_names = [command[0] for command in commands]
-        print '\n  '.join(commands)
-        
-        print type(connection.dreamhost_ps.list_size_history(ps = 'ps7093'))
-        print type(connection.result_list())
-        
-        
-        #print connection.mysql.list_dbs()
-    else:
-        print "Error connecting!"
-        print connection.status()
-
