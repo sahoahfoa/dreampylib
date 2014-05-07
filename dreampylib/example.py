@@ -4,38 +4,34 @@
 
 import dreampylib
 
+def main():
 
-# Dreamhost test API account:
-user = 'apitest@dreamhost.com'
-key  = '6SHU5P2HLDAYECUM'
+    # Dreamhost test API account:
+    user = 'apitest@dreamhost.com'
+    key  = '6SHU5P2HLDAYECUM'
 
-# Specify the default returntype.
-# Can be either 'dict' or 'list', and is dict by default
-defaultReturnType = 'dict'   
-
-# Initialize the library and open a connection
-connection = dreampylib.DreampyLib(user,key)
-   
-# If the connection is up, do some tests.
-if connection.IsConnected():
-    
+    # Initialize the library and open a connection
+    connection = dreampylib.DreampyLib(user,key)
+       
+    # If the connection is up, do some tests.
+    if not connection.is_connected():
+        print("Error connecting!")
+        print(connection.status())
+        return
+        
     # For instance, list the available commands:
-    print 'Available commands:\n ',
-    listOfCommands = connection.AvailableCommands()
-    print '\n  '.join(listOfCommands)
+    print('Available commands:\n ')
+    commands = connection.available_commands()
+    command_names = [command[0] for command in commands]
+    print('\n  '.join(command_names))
     
-    print connection.dreamhost_ps.list_ps()
+    print(connection.dreamhost_ps.list_ps())
     
-    # Even if defaultReturnType is 'dict', you can get the last result as a list, too.
-
     connection.dreamhost_ps.list_size_history(ps = 'ps7093')
-    print connection.ResultList()
+    print(connection.result_list())
     
-    # Let's also print the keys so we know what we're looking at
-    print connection.ResultKeys()
-    
-    
-    #print connection.mysql.list_dbs()
-else:
-    print "Error connecting!"
-    print connection.Status()
+    # Let's also print(the keys so we know what we're looking at
+    print(connection.result_keys())
+
+if __name__ == '__main__':
+    main()
