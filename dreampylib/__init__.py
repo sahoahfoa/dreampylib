@@ -26,27 +26,27 @@ class _RemoteCommand(object):
         self._resultList = []
         
     
-    def Status(self):
+    def status(self):
         if self._child:
-            return self._child.Status()
+            return self._child.status()
         else:
             return self._status
     
-    def ResultKeys(self):
+    def result_keys(self):
         if self._child:
-            return self._child.ResultKeys()
+            return self._child.result_keys()
         else:
             return self._resultKeys
         
-    def ResultList(self):
+    def result_list(self):
         if self._child:
-            return self._child.ResultList()
+            return self._child.result_list()
         else:
             return self._resultList
         
-    def ResultDict(self):
+    def result_dict(self):
         if self._child:
-            return self._child.ResultDict()
+            return self._child.result_dict()
         else:
             return self._resultDict
     
@@ -58,11 +58,11 @@ class _RemoteCommand(object):
         if DEBUG:
             print "Called %s(%s)" % (self._name, str(kwargs))
         
-        if self._parent.IsConnected():
+        if self._parent.is_connected():
         
             request = {}
             request.update(kwargs)
-            request.update(self._parent._GetUserData())
+            request.update(self._parent._get_user_data())
             
             request['cmd'] = self._cmd
             request['unique_id'] = str(uuid.uuid4())
@@ -71,11 +71,11 @@ class _RemoteCommand(object):
                 print request
                 
             self._connection = urllib2.urlopen(self._url, urllib.urlencode(request))
-            return self._ParseResult(returnType)
+            return self._parse_result(returnType)
         else:
             return []
         
-    def _ParseResult(self, returnType):
+    def _parse_result(self, returnType):
         '''Parse the result of the request'''
         lines = [l.strip() for l in self._connection.readlines()]
         
@@ -123,10 +123,10 @@ class DreampyLib(object):
         self._availableCommands = []
         
         if user and key:
-            self.Connect()
+            self.connect()
 
     
-    def Connect(self, user = None, key = None, url = None):
+    def connect(self, user = None, key = None, url = None):
         if user:
             self._user = user
             
@@ -144,37 +144,37 @@ class DreampyLib(object):
             return False
         return True
         
-    def AvailableCommands(self):
+    def available_commands(self):
         return self._availableCommands
     
-    def IsConnected(self):
+    def is_connected(self):
         return self._connected
      
-    def ResultKeys(self):
+    def result_keys(self):
         if not self._lastCommand:
             return []
         else:
-            return self._lastCommand.ResultKeys()
+            return self._lastCommand.result_keys()
         
-    def ResultList(self):
+    def result_list(self):
         if not self._lastCommand:
             return []
         else:
-            return self._lastCommand.ResultList()
+            return self._lastCommand.result_list()
         
-    def ResultDict(self):
+    def result_dict(self):
         if not self._lastCommand:
             return []
         else:
-            return self._lastCommand.ResultDict()
+            return self._lastCommand.result_dict()
         
-    def Status(self):
+    def status(self):
         if not self._lastCommand:
             return None
         else:
-            return self._lastCommand.Status()
+            return self._lastCommand.status()
         
-    def _GetUserData(self):
+    def _get_user_data(self):
         return {    'username':  self._user,
                     'key':       self._key,
                 }
@@ -199,19 +199,20 @@ if __name__ == '__main__':
     connection = DreampyLib(user,key)
        
     # If the connection is up, do some tests.
-    if connection.IsConnected():
+    if connection.is_connected():
         
         # For instance, list the available commands:
         print 'Available commands:\n ',
-        listOfCommands = connection.AvailableCommands()
-        print '\n  '.join(listOfCommands)
+        commands = connection.available_commands()
+        command_names = [command[0] for command in commands]
+        print '\n  '.join(commands)
         
         print type(connection.dreamhost_ps.list_size_history(ps = 'ps7093'))
-        print type(connection.ResultList())
+        print type(connection.result_list())
         
         
         #print connection.mysql.list_dbs()
     else:
         print "Error connecting!"
-        print connection.Status()
+        print connection.status()
 
