@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+import argparse
+import dreampylib
+import logging
+import pprint
+import requests
+
+LOGGER = logging.getLogger('update_my_dns')
+
+def main():
+    logging.basicConfig()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('user', help='Your dreamhost user')
+    parser.add_argument('apikey', help='Your dreamhost API key')
+    parser.add_argument('record', help='The record to add/update')
+    parser.add_argument('type', choices=['A', 'CNAME', 'NS', 'PTR', 'NAPTR', 'SRV', 'TXT', 'SPF', 'AAAA'], help="The type of DNS entry to record")
+    parser.add_argument('--value', default=None, help='The value of the record. If not specified use ifconfig.me to get the current external IP address')
+    parser.add_argument('--comment', '-c', help='An optional comment to add to the record')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Make logging more verbose')
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
+
+    if args.value == None:
+        result = requests.get('http://ifconfig.me/ip')
+        if not result.status_code == 200:
+            raise Exception("Failed to get IP address from ifconfig.me")
+        args.value = result.text.strip()
+        LOGGER.info("Using IP address from ifconfig.me: %s", args.value)
+
+    connection = dreampylib.DreampyLib(args.user, args.apikey)
+    if not connection.is_connected():
+        raise Exception("Unable to connect")
+
+    success, msg, body = connection.dns.list_records()
+    record = None
+    for r in body:
+        if r['record'] == args.record and r['type'] == args.type:
+            record = r
+
+    if record:
+        LOGGER.info("Found {record} {type} {value} in the list of existing records, removing it".format(**record))
+        success, msg, body = connection.dns.remove_record(
+            record  = record['record'],
+            type    = record['type'],
+            value   = record['value'],
+        )
+        if not success:
+            raise Exception("Failed to remove old record {record} {type} {value}: {msg}. {body}".format(msg=msg, body=body, **record))
+            
+    LOGGER.info("Adding {} record {} to Dreamhost with value {}{}".format(args.type, args.record, args.value, ' and comment ' + args.comment if args.comment else ''))
+    success, msg, body = connection.dns.add_record(
+        record    = args.record,
+        type      = args.type,
+        value     = args.value,
+        comment   = args.comment
+    )
+    if not success:
+        raise Exception("Failed to create new record {} {} {}: {}. {}".format(args.record, args.type, args.value, msg, body))
+    
+    LOGGER.info("Complete")       
+
+if __name__ == '__main__':
+    main()
