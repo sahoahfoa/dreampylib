@@ -7,7 +7,6 @@ import uuid
 import urllib, urllib2
 
 DEBUG = False
-defaultReturnType = 'dict'
 
 class _RemoteCommand(object):
     # some magic to catch arbitrary maybe non-existent func. calls
@@ -72,7 +71,7 @@ class _RemoteCommand(object):
                 print request
                 
             self._connection = urllib2.urlopen(self._url, urllib.urlencode(request))
-            return self._ParseResult(returnType or defaultReturnType)
+            return self._ParseResult(returnType)
         else:
             return []
         
@@ -196,10 +195,6 @@ if __name__ == '__main__':
     # Set this to true to enable debugging
     DEBUG = False
     
-    # Specify the default returntype.
-    # Can be either 'dict' or 'list'
-    defaultReturnType = 'dict'   
-    
     # Initialize the library and open a connection
     connection = DreampyLib(user,key)
        
@@ -211,8 +206,6 @@ if __name__ == '__main__':
         listOfCommands = connection.AvailableCommands()
         print '\n  '.join(listOfCommands)
         
-        # Even if defaultReturnType is 'dict', you can get the last result as a list, too.
-
         print type(connection.dreamhost_ps.list_size_history(ps = 'ps7093'))
         print type(connection.ResultList())
         
