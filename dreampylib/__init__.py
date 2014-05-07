@@ -5,9 +5,9 @@
 # UUID is needed to generate a nice random uuid for dreamhost
 import uuid
 import urllib, urllib2
+import logging
 
-DEBUG = False
-
+LOGGER = logging.getLogger('dreampylib')
 class _RemoteCommand(object):
     # some magic to catch arbitrary maybe non-existent func. calls
     # supports "nested" methods (e.g. examples.getStateName)
@@ -55,8 +55,7 @@ class _RemoteCommand(object):
         return self._child
     
     def __call__(self, returnType = None, *args, **kwargs):
-        if DEBUG:
-            print "Called %s(%s)" % (self._name, str(kwargs))
+        LOGGER.debug("Called %s(%s)", self._name, str(kwargs))
         
         if self._parent.is_connected():
         
@@ -67,8 +66,7 @@ class _RemoteCommand(object):
             request['cmd'] = self._cmd
             request['unique_id'] = str(uuid.uuid4())
             
-            if DEBUG:
-                print request
+            LOGGER.debug("Request: %s", request)
                 
             self._connection = urllib2.urlopen(self._url, urllib.urlencode(request))
             return self._parse_result(returnType)
@@ -98,15 +96,12 @@ class _RemoteCommand(object):
             else:
                 table = self._resultDict
             
-            if DEBUG:
-                for t in table:
-                    print t
+            LOGGER.debug("Table: %s", table)
                     
             return table
         
         else:
-            if DEBUG:
-                print 'ERROR with %s: %s - %s' % (self._name, lines[0], lines[1])
+            LOGGER.debug('ERROR with %s: %s - %s', self._name, lines[0], lines[1])
             self._status = '%s: %s - %s' % (self._name, lines[0], lines[1])
             return False, lines[0], lines[1]
         
