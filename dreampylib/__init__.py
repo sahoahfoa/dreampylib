@@ -98,7 +98,7 @@ class _RemoteCommand(object):
             
             LOGGER.debug("Table: %s", table)
                     
-            return table
+            return True, 'success', table
         
         else:
             LOGGER.debug('ERROR with %s: %s - %s', self._name, lines[0], lines[1])
