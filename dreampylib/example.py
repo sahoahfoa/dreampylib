@@ -6,12 +6,11 @@ import dreampylib
 
 def main():
 
-    # Dreamhost test API account:
-    user = 'apitest@dreamhost.com'
-    key  = '6SHU5P2HLDAYECUM'
+    # DreamHost test API:
+    key = '6SHU5P2HLDAYECUM'
 
     # Initialize the library and open a connection
-    connection = dreampylib.DreampyLib(user,key)
+    connection = dreampylib.DreampyLib(key)
        
     # If the connection is up, do some tests.
     if not connection.is_connected():
@@ -23,15 +22,20 @@ def main():
     print('Available commands:\n ')
     commands = connection.available_commands()
     command_names = [command[0] for command in commands]
-    print('\n  '.join(command_names))
+    print('\n'.join(command_names))
+
+    success, msg, body = connection.announcement_list.list_lists()
+    if not success:
+        raise Exception("Failed to list announcement lists.")
+    print(body)
+
+    for announcement_list in body:
+        if int(announcement_list['num_subscribers']) < 200:
+            connection.announcement_list.list_subscribers(listname=announcement_list['listname'], domain=announcement_list['domain'])
+            print(connection.result_list())
     
-    print(connection.dreamhost_ps.list_ps())
-    
-    connection.dreamhost_ps.list_size_history(ps = 'ps7093')
-    print(connection.result_list())
-    
-    # Let's also print(the keys so we know what we're looking at
-    print(connection.result_keys())
+            # Let's also print(the keys so we know what we're looking at
+            print(connection.result_keys())
 
 if __name__ == '__main__':
     main()
