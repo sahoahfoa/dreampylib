@@ -1,170 +1,143 @@
-# Dreampylib - version 1.0
-# (c) 2009 by Laurens Simonis
-# See licence.txt for licencing info
+"""
+Dreampylib - version 1.0-alpha
+A python library for interacting with Dreamhost's API
 
-# UUID is needed to generate a nice random uuid for dreamhost
+(c) 2009 by Laurens Simonis
+See LICENSE for licencing info
+"""
+import os
 import uuid
-import urllib, urllib2
 import logging
+import requests
 
-LOGGER = logging.getLogger('dreampylib')
-class _RemoteCommand(object):
-    # some magic to catch arbitrary maybe non-existent func. calls
-    # supports "nested" methods (e.g. examples.getStateName)
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
+LOGGER = logging.getLogger("dreampylib")
+
+
+class _RemoteCommand:
+    """
+    Execute arbitrary remote api calls
+      Should catch arbitrary maybe non-existent function calls.
+      Supports "nested" methods (e.g. examples.getStateName)
+    """
+
     def __init__(self, name, parent, url):
-        # Store the name of the 
+        """Initialize _RemoteCommand"""
         self._name = name
-        self._cmd  = name.replace('.','-')
+        self._cmd = name.replace(".", "-")
         self._parent = parent
         self._url = url
         self._child = None
-        
-        self._result_keys = []
-        self._status = ""
-        self._result_dict = []
-        self._result_list = []
-        
+
+        self._status = None
+        self._result = []
+
+    def result(self):
+        """Return the result of the command"""
+        if self._child:
+            return self._child.result()
+        return self._result
+
     def status(self):
+        """Return the status of the command"""
         if self._child:
             return self._child.status()
-        else:
-            return self._status
-    
-    def result_keys(self):
-        if self._child:
-            return self._child.result_keys()
-        else:
-            return self._result_keys
-        
-    def result_list(self):
-        if self._child:
-            return self._child.result_list()
-        else:
-            return self._result_list
-        
-    def result_dict(self):
-        if self._child:
-            return self._child.result_dict()
-        else:
-            return self._result_dict
-    
+        return self._status
+
     def __getattr__(self, name):
-        self._child = _RemoteCommand("%s.%s" % (self._name, name), self._parent, self._url)
+        """Dynamically build the command"""
+        self._child = _RemoteCommand(
+            "%s.%s" % (self._name, name), self._parent, self._url
+        )
         return self._child
-    
-    def __call__(self, return_type=None, *args, **kwargs):
+
+    def __call__(self, *args, **kwargs):
+        """Execute the api call"""
         LOGGER.debug("Called %s(%s)", self._name, str(kwargs))
-        
+
         if self._parent.is_connected():
             request = {}
             request.update(kwargs)
             request.update(self._parent._get_user_data())
-            
-            request['cmd'] = self._cmd
-            request['unique_id'] = str(uuid.uuid4())
-            
+
+            request["cmd"] = self._cmd
+            request["unique_id"] = str(uuid.uuid4())
+            request["format"] = "json"
+
             LOGGER.debug("Request: %s", request)
-                
-            self._connection = urllib2.urlopen(self._url, urllib.urlencode(request))
-            return self._parse_result(return_type)
-        else:
-            return []
-        
-    def _parse_result(self, return_type):
-        '''Parse the result of the request'''
-        lines = [l.strip() for l in self._connection.readlines()]
-        
-        self._status = lines[0]
-        
-        if self._status == 'success':
-            self._result_keys = keys = lines[1].split('\t')
-            
-            table = []
-            for resultLine in lines[2:]:
-                    values = resultLine.split('\t')
-                    self._result_dict.append(dict(zip(keys,values)))
-                    if len(values) == 1:
-                        self._result_list.append(values[0])
-                    else:
-                        self._result_list.append(values)
-            
-            if return_type == 'list':
-                table = self._result_list
-            else:
-                table = self._result_dict
-            
-            LOGGER.debug("Table: %s", table)
-                    
-            return True, 'success', table
-        
-        else:
-            LOGGER.debug('ERROR with %s: %s - %s', self._name, lines[0], lines[1])
-            self._status = '%s: %s - %s' % (self._name, lines[0], lines[1])
-            return False, lines[0], lines[1]
-        
-class DreampyLib(object):
-    
-    def __init__(self, key=None, url='https://api.dreamhost.com'):
-        '''Initialises the connection to the dreamhost API.'''
+
+            response = requests.post(url=self._url, data=request).json()
+
+            self._status = response['result']
+            self._result = response['data']
+            if self._status == "success":
+                LOGGER.debug("Result: %s", self._result)
+                return True, self._status, self._result
+
+            LOGGER.debug('ERROR with %s: %s - %s', self._name, self._status, self._result)
+            self._status = '%s: %s - %s' % (self._name, self._status, self._result)
+            return False, self._status, self._result
+        return []
+
+
+class DreampyLib:
+    """Wrapper to interact with Dreamhost's API"""
+    def __init__(self, key=None, url="https://api.dreamhost.com"):
+        """Initialise the connection to the dreamhost API."""
         self._key = key
         self._url = url
         self._last_command = None
         self._connected = False
         self._available_commands = []
-        
+
         if key:
             self.connect()
 
-    
     def connect(self, key=None, url=None):
+        """Connect to the dreamhost API and retrive available commands"""
         if key:
             self._key = key
         if url:
             self._url = url
 
         self._connected = True
-        self._connected, _, self._available_commands = self.api.list_accessible_cmds(return_type='list')
+        self._connected, _, self._available_commands = self.api.list_accessible_cmds()
+
         if not self._connected:
             self._available_commands = []
             return False
         return True
-        
-    def available_commands(self):
-        return self._available_commands
-    
+
     def is_connected(self):
+        """Check if connected to dreamhost API"""
         return self._connected
-     
-    def result_keys(self):
+
+    def result(self):
+        """Return result of the command"""
         if not self._last_command:
             return []
-        else:
-            return self._last_command.result_keys()
-        
-    def result_list(self):
-        if not self._last_command:
-            return []
-        else:
-            return self._last_command.result_list()
-        
-    def result_dict(self):
-        if not self._last_command:
-            return []
-        else:
-            return self._last_command.result_dict()
-        
+        return self._last_command.result()
+
     def status(self):
+        """Return status of the command"""
         if not self._last_command:
             return None
-        else:
-            return self._last_command.status()
-        
+        return self._last_command.status()
+
+    def available_commands(self):
+        """List available commands and relevant info"""
+        return self._available_commands
+
     def _get_user_data(self):
-        return {'key': self._key}
-    
+        """Privide static user information"""
+        return {"key": self._key}
+
     def __getattr__(self, name):
+        """Dynamically build command"""
         self._last_command = _RemoteCommand(name, self, self._url)
         return self._last_command
-        
-    def dir(self):
-        return self.api.list_accessible_cmds(return_type='list')[-1]
+
+    def __dir__(self):
+        """List available commands"""
+        return [cmd['cmd'].replace("-", ".") for cmd in self._available_commands]
