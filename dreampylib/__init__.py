@@ -85,9 +85,10 @@ class DreampyLib:
     """Wrapper to interact with Dreamhost's API"""
     def __init__(self, key=None, url="https://api.dreamhost.com"):
         """Initialise the connection to the dreamhost API."""
+        if not key:
+          key = os.getenv('API_KEY')
+
         self._key = key
-        if not self._key:
-          self._key = os.environ['API_KEY']
         self._url = url
         self._last_command = None
         self._connected = False
