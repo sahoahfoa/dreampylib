@@ -24,12 +24,13 @@ def main():
     logging.basicConfig()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("apikey", help="Your dreamhost API key")
-    parser.add_argument("record", help="The record to add/update")
+    parser.add_argument("--apikey", "-a", help="Your dreamhost API key")
+    parser.add_argument("--record", "-r", help="The record to add/update", required=True)
     parser.add_argument(
-        "type",
+        "--type",
         choices=["A", "CNAME", "NS", "PTR", "NAPTR", "SRV", "TXT", "SPF", "AAAA"],
         help="The type of DNS entry to record",
+        required=True,
     )
     parser.add_argument(
         "--value",
